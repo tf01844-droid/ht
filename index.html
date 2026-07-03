@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOOD QR - 홈런볼</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    color: #222;
+    font-size: 14px;
+  }
+  body {
+    background: #f5f5f5;
+    max-width: 430px;
+    margin: 0 auto;
+    padding-bottom: 70px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ── Header ── */
+  .header { background:#fff; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; }
+  .header-logo { display:flex; align-items:center; gap:8px; font-weight:700; font-size:17px; color:#1a4fa0; }
+  .header-logo .dot { width:22px; height:22px; background:#1a4fa0; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .header-logo .dot::after { content:''; width:8px; height:8px; background:#fff; border-radius:50%; }
+  .lang-btn { border:1px solid #ccc; border-radius:20px; padding:4px 10px; font-size:12px; background:#fff; cursor:pointer; }
+  .menu-btn { font-size:20px; cursor:pointer; color:#444; background:none; border:none; }
+
+  /* ── Tab Nav ── */
+  .tab-nav { background:#1a4fa0; display:flex; overflow-x:auto; scrollbar-width:none; }
+  .tab-nav::-webkit-scrollbar { display:none; }
+  .tab-nav button { flex:0 0 auto; padding:12px 14px; background:none; border:none; color:rgba(255,255,255,0.75); font-size:13px; cursor:pointer; white-space:nowrap; font-family:inherit; border-bottom:3px solid transparent; }
+  .tab-nav button.active { color:#fff; font-weight:700; border-bottom-color:#fff; }
+
+  .notice-bar { background:#eef3fb; padding:10px 16px; font-size:12px; color:#555; display:flex; align-items:center; gap:6px; }
+
+  /* ── Section ── */
+  .section { background:#fff; margin:8px 8px 0; border-radius:8px; overflow:hidden; }
+  .section-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; }
+  .section-title { display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; }
+  .section-title .icon { width:20px; height:20px; background:#1a4fa0; border-radius:50%; flex-shrink:0; }
+  .chevron { font-size:16px; color:#888; }
+  .section-body { padding:0 16px 16px; border-top:1px solid #eee; display:none; }
+  .section-body.open { display:block; padding-top:14px; }
+
+  .sub-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .sub-tab { border:1px solid #ccc; border-radius:20px; padding:5px 14px; font-size:12px; background:#fff; cursor:pointer; color:#555; font-family:inherit; }
+  .sub-tab.active { background:#1a4fa0; color:#fff; border-color:#1a4fa0; font-weight:600; }
+
+  .product-card { display:flex; gap:12px; align-items:flex-start; }
+  .product-img { width:90px; height:90px; border:1px solid #eee; border-radius:10px; flex-shrink:0; background:#fffbe6; display:flex; align-items:center; justify-content:center; font-size:42px; }
+  .product-info table { width:100%; border-collapse:collapse; }
+  .product-info td { padding:3px 0; font-size:13px; }
+  .product-info td:first-child { color:#888; width:70px; }
+  .product-info td:last-child { font-weight:500; }
+
+  .kcal-big { text-align:center; font-size:40px; font-weight:700; color:#1a4fa0; padding:16px 0 8px; }
+  .kcal-big span { font-size:16px; font-weight:400; color:#888; }
+  .nutrition-grid { display:grid; grid-template-columns:1fr 1fr; border:1px solid #eee; border-radius:8px; overflow:hidden; }
+  .nutrition-item { padding:12px 14px; border-bottom:1px solid #eee; }
+  .nutrition-item:nth-child(odd) { border-right:1px solid #eee; }
+  .nutrition-item:nth-last-child(-n+2) { border-bottom:none; }
+  .nutrition-label { font-size:12px; color:#888; margin-bottom:4px; }
+  .nutrition-value { font-size:15px; font-weight:700; }
+  .nutrition-footer { background:#222; color:#fff; border-radius:0 0 8px 8px; padding:10px 14px; display:flex; justify-content:space-between; font-size:12px; margin-top:-1px; }
+
+  .ingredient-group { margin-bottom:14px; }
+  .ingredient-group-title { font-size:13px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .ingredient-group-title::before { content:'◉'; color:#1a4fa0; font-size:12px; }
+  .ingredient-text { font-size:12px; line-height:1.8; color:#333; }
+  .ingredient-text strong { font-weight:700; }
+  .allergy-tag { display:inline-block; background:#fff3e0; color:#e65100; border:1px solid #ffcc80; border-radius:4px; font-size:11px; padding:2px 7px; margin:2px; }
+
+  .step-item { display:flex; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px dashed #eee; }
+  .step-item:last-child { border-bottom:none; }
+  .step-num { background:#e67e22; color:#fff; border-radius:6px; font-weight:700; font-size:13px; padding:3px 8px; flex-shrink:0; }
+  .step-text { font-size:13px; line-height:1.6; flex:1; padding-top:2px; }
+  .step-img { font-size:32px; flex-shrink:0; }
+
+  .haccp-wrap { text-align:center; padding:14px 0; }
+  .haccp-badge { display:inline-flex; flex-direction:column; align-items:center; justify-content:center; width:80px; height:80px; border:3px solid #5aab6e; border-radius:50%; }
+  .haccp-badge .h-label { font-size:9px; color:#5aab6e; }
+  .haccp-badge .h-main { font-size:18px; font-weight:900; color:#5aab6e; }
+  .haccp-badge .h-sub { font-size:8px; color:#5aab6e; text-align:center; line-height:1.2; }
+  .mfg-card { background:#f8f9fb; border-radius:8px; padding:12px 14px; margin-bottom:10px; }
+  .mfg-row { display:flex; gap:8px; font-size:12px; padding:3px 0; }
+  .mfg-row span:first-child { color:#888; width:80px; flex-shrink:0; }
+
+  .promo-inner { padding:28px 20px; text-align:center; background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%); border-radius:10px; }
+  .promo-brand-row { color:#fff; font-size:13px; display:flex; align-items:center; gap:6px; margin-bottom:16px; }
+  .promo-brand-dot { width:20px; height:20px; background:#e74c3c; border-radius:50%; }
+  .promo-ball { font-size:70px; line-height:1; }
+  .promo-name { color:#fff; font-size:28px; font-weight:900; margin-top:8px; }
+  .promo-tagline { color:#ffd700; font-size:14px; margin-top:6px; font-weight:600; }
+  .promo-desc { margin-top:14px; font-size:13px; line-height:1.7; color:#444; }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:430px;
+    background:#fff; border-top:1px solid #eee;
+    display:flex; justify-content:space-around;
+    padding:8px 0 12px; z-index:100;
+  }
+  .nav-item {
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    font-size:10px; color:#555; cursor:pointer; flex:1;
+    background:none; border:none; font-family:inherit;
+  }
+  .nav-icon { font-size:20px; position:relative; display:inline-block; }
+  .nav-item.chat { color:#1a4fa0; }
+  .bubble-svg { width:24px; height:24px; fill:#1a4fa0; display:block; }
+  .chat-badge {
+    position:absolute; top:-4px; right:-5px;
+    background:#e74c3c; color:#fff; border-radius:50%;
+    width:14px; height:14px; font-size:9px;
+    display:flex; align-items:center; justify-content:center; font-weight:700;
+  }
+
+  /* ════════════════════════════════════
+     AI CHATBOT MODAL
+  ════════════════════════════════════ */
+  .chat-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    z-index:300; display:none; align-items:flex-end; justify-content:center;
+  }
+  .chat-overlay.open { display:flex; }
+
+  .chat-modal {
+    background:#f0f2f5;
+    width:100%; max-width:430px;
+    border-radius:20px 20px 0 0;
+    height:82vh;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    animation:slideUp .28s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+  .chat-modal-header {
+    background:linear-gradient(135deg,#1a4fa0 0%,#0d3480 100%);
+    color:#fff; padding:14px 16px;
+    display:flex; align-items:center; gap:12px;
+    flex-shrink:0;
+    box-shadow:0 2px 8px rgba(0,0,0,0.2);
+    position:relative;
+  }
+  .reset-confirm-pop {
+    display:none;
+    position:absolute; top:52px; right:12px;
+    width:220px; background:#fff; color:#222;
+    border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    padding:14px; z-index:60;
+  }
+  .reset-confirm-pop.open { display:block; }
+  .reset-confirm-pop .rc-title { font-size:13px; font-weight:700; margin-bottom:4px; }
+  .reset-confirm-pop .rc-desc { font-size:11.5px; color:#777; line-height:1.5; margin-bottom:12px; }
+  .reset-confirm-pop .rc-btns { display:flex; gap:8px; }
+  .reset-confirm-pop button { flex:1; border:none; border-radius:8px; padding:8px 0; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .reset-confirm-pop .rc-cancel { background:#f1f2f4; color:#444; }
+  .reset-confirm-pop .rc-ok { background:#e11d48; color:#fff; }
+  .modal-avatar {
+    width:40px; height:40px; background:rgba(255,255,255,0.2);
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:20px; flex-shrink:0;
+  }
+  .modal-title { font-weight:700; font-size:14px; }
+  .modal-subtitle { font-size:11px; opacity:.8; margin-top:2px; }
+  .modal-status { margin-left:auto; display:flex; align-items:center; gap:5px; font-size:11px; opacity:.9; }
+  .status-dot { width:8px; height:8px; background:#4ade80; border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .modal-close { background:none; border:none; color:#fff; font-size:22px; cursor:pointer; margin-left:8px; line-height:1; }
+
+  /* drag handle */
+  .drag-handle { width:36px; height:4px; background:rgba(255,255,255,.4); border-radius:2px; margin:0 auto 10px; }
+
+  .chat-messages {
+    flex:1; overflow-y:auto; padding:14px 12px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .chat-messages::-webkit-scrollbar { width:3px; }
+  .chat-messages::-webkit-scrollbar-thumb { background:#ddd; border-radius:3px; }
+
+  .date-divider {
+    text-align:center; font-size:11px; color:#aaa; margin:4px 0;
+    display:flex; align-items:center; gap:8px;
+  }
+  .date-divider::before,.date-divider::after { content:''; flex:1; height:1px; background:#e0e0e0; }
+
+  .msg-row { display:flex; gap:8px; align-items:flex-end; }
+  .msg-row.user { flex-direction:row-reverse; }
+  .bot-av {
+    width:28px; height:28px; background:#1a4fa0; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0; margin-bottom:2px;
+  }
+  .msg-col { display:flex; flex-direction:column; gap:3px; max-width:78%; }
+  .msg-row.user .msg-col { align-items:flex-end; }
+
+  .msg-bubble { padding:10px 13px; border-radius:18px; font-size:13px; line-height:1.6; word-break:keep-all; }
+  .msg-row:not(.user) .msg-bubble { background:#fff; border-bottom-left-radius:4px; color:#1a1a1a; box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .msg-row.user .msg-bubble { background:#1a4fa0; border-bottom-right-radius:4px; color:#fff; }
+  .msg-time { font-size:10px; color:#bbb; padding:0 4px; }
+  .msg-row.user .msg-time { text-align:right; }
+
+  /* receipt card */
+  .receipt-card { background:#fff; border:1px solid #e8ecf4; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-top:4px; }
+  .receipt-header { background:#1a4fa0; color:#fff; padding:10px 14px; font-weight:700; font-size:13px; display:flex; align-items:center; gap:6px; }
+  .receipt-body { padding:10px 14px; }
+  .receipt-row { display:flex; gap:8px; padding:5px 0; border-bottom:1px solid #f4f4f4; font-size:12px; }
+  .receipt-row:last-child { border-bottom:none; }
+  .receipt-label { color:#888; width:72px; flex-shrink:0; }
+  .receipt-value { color:#1a1a1a; font-weight:500; flex:1; }
+  .badge-done { display:inline-block; background:#e6f9ee; color:#16a34a; border-radius:4px; padding:1px 7px; font-size:11px; font-weight:700; }
+
+  /* quick chips */
+  .quick-wrap { display:flex; flex-wrap:wrap; gap:7px; padding:4px 0 2px; padding-left:36px; }
+  .quick-chip {
+    background:#fff; border:1.5px solid #1a4fa0; color:#1a4fa0;
+    border-radius:20px; padding:6px 13px; font-size:12px;
+    cursor:pointer; font-family:inherit; white-space:nowrap;
+    transition:all .15s;
+  }
+  .quick-chip:hover,.quick-chip:active { background:#1a4fa0; color:#fff; }
+
+  /* typing */
+  .typing-bubble { background:#fff; border-radius:18px; border-bottom-left-radius:4px; padding:12px 16px; box-shadow:0 1px 4px rgba(0,0,0,.08); display:flex; gap:4px; align-items:center; }
+  .td { width:7px; height:7px; background:#ccc; border-radius:50%; animation:td 1.2s infinite; }
+  .td:nth-child(2){animation-delay:.2s} .td:nth-child(3){animation-delay:.4s}
+  @keyframes td { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+
+  /* input */
+  .chat-input-area {
+    background:#fff; border-top:1px solid #e8e8e8;
+    padding:10px 12px; display:flex; gap:8px; align-items:flex-end; flex-shrink:0;
+  }
+  .chat-input-box {
+    flex:1; border:1.5px solid #ddd; border-radius:22px;
+    padding:10px 14px; font-size:13px; outline:none; font-family:inherit;
+    resize:none; max-height:100px; line-height:1.5;
+    transition:border-color .15s;
+  }
+  .chat-input-box:focus { border-color:#1a4fa0; }
+  .chat-send-btn {
+    width:40px; height:40px; background:#1a4fa0; color:#fff;
+    border:none; border-radius:50%; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; font-size:16px; transition:background .15s;
+  }
+  .chat-send-btn:hover { background:#0d3480; }
+  .chat-send-btn:disabled { background:#ccc; cursor:not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- ══ Header ══ -->
+<div class="header">
+  <div class="header-logo"><div class="dot"></div> FOOD QR</div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <button class="lang-btn">🌐 한국어</button>
+    <button class="menu-btn">☰</button>
+  </div>
+</div>
+
+<!-- ══ Tab Nav ══ -->
+<div class="tab-nav">
+  <button onclick="showTab('summary')" id="tab-summary" class="active">요약정보</button>
+  <button onclick="showTab('label')"   id="tab-label">표시정보</button>
+  <button onclick="showTab('safety')"  id="tab-safety">안전정보</button>
+  <button onclick="showTab('cooking')" id="tab-cooking">조리(활용)법</button>
+  <button onclick="showTab('promo')"   id="tab-promo">제품홍보</button>
+</div>
+
+<!-- ══════════ 요약정보 ══════════ -->
+<div id="page-summary">
+  <div class="notice-bar">📦 식품업체가 제공하는 정보입니다.</div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('s-product')">
+      <div class="section-title"><div class="icon"></div> 제품명 [홈런볼(초코)]</div>
+      <span class="chevron" id="chev-s-product">∨</span>
+    </div>
+    <div class="section-body open" id="body-s-product">
+      <div class="product-card">
+        <div class="product-img">⚾</div>
+        <div class="product-info">
+          <table>
+            <tr><td>판매원</td><td>해태제과식품(주)</td></tr>
+            <tr><td>식품유형</td><td>과자</td></tr>
+            <tr><td>내용량</td><td>46 g (270kcal)</td></tr>
+            <tr><td>소비기한</td><td>밑면 표기일까지</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('s-nutrition')">
+      <div class="section-title"><div class="icon"></div> 영양표시</div>
+      <span class="chevron" id="chev-s-nutrition">∨</span>
+    </div>
+    <div class="section-body open" id="body-s-nutrition">
+      <div class="sub-tabs">
+        <button class="sub-tab active">영양표시</button>
+        <button class="sub-tab">원재료명</button>
+        <button class="sub-tab">알레르기 유발물질 표기</button>
+        <button class="sub-tab">소비자 안내</button>
+      </div>
+      <div class="kcal-big">270 <span>kcal</span></div>
+      <div class="nutrition-grid">
+        <div class="nutrition-item"><div class="nutrition-label">나트륨</div><div class="nutrition-value">70mg</div></div>
+        <div class="nutrition-item"><div class="nutrition-label">탄수화물</div><div class="nutrition-value">23g</div></div>
+        <div class="nutrition-item"><div class="nutrition-label">지방</div><div class="nutrition-value">18g</div></div>
+        <div class="nutrition-item"><div class="nutrition-label">단백질</div><div class="nutrition-value">3.6g</div></div>
+      </div>
+      <div class="nutrition-footer"><span>영양정보</span><span>총 내용량 46g · 270kcal</span></div>
+    </div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- ══════════ 표시정보 ══════════ -->
+<div id="page-label" style="display:none;">
+  <div class="notice-bar">📦 식품업체가 제공하는 정보입니다.</div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('l-basic')">
+      <div class="section-title"><div class="icon"></div> 제품명 [홈런볼(초코)]</div>
+      <span class="chevron" id="chev-l-basic">∨</span>
+    </div>
+    <div class="section-body open" id="body-l-basic">
+      <div class="sub-tabs">
+        <button class="sub-tab active">기본정보</button>
+        <button class="sub-tab">원재료명</button>
+        <button class="sub-tab">알레르기 유발물질 표기</button>
+        <button class="sub-tab">영양표시</button>
+      </div>
+      <div class="product-card" style="margin-bottom:16px;">
+        <div class="product-img">⚾</div>
+        <div class="product-info">
+          <table>
+            <tr><td>판매원</td><td>해태제과식품(주)</td></tr>
+            <tr><td>식품유형</td><td>과자</td></tr>
+            <tr><td>내용량</td><td>46 g (270kcal)</td></tr>
+            <tr><td>소비기한</td><td>밑면 표기일까지</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="ingredient-group">
+        <div class="ingredient-group-title">주원료</div>
+        <div class="ingredient-text">
+          밀가루(<strong>밀</strong>:미국산·호주산), 설탕, 쇼트닝(팜유·팜스테아린), 코코아분말(4%, 네덜란드산),
+          초콜릿[설탕·코코아버터·전지분유(<strong>우유</strong>)·코코아매스·레시틴(<strong>대두</strong>)],
+          가공유지, 전란(<strong>계란</strong>), 탈지분유(<strong>우유</strong>), 덱스트린, 정제소금, 혼합제제, 바닐라향
+        </div>
+      </div>
+      <div style="border-top:1px solid #eee;padding-top:12px;">
+        <div class="ingredient-group-title">알레르기 유발물질</div>
+        <div style="margin-top:6px;">
+          <span class="allergy-tag">밀</span><span class="allergy-tag">대두</span>
+          <span class="allergy-tag">계란</span><span class="allergy-tag">우유</span>
+          <span class="allergy-tag">땅콩</span><span class="allergy-tag">쇠고기</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- ══════════ 안전정보 ══════════ -->
+<div id="page-safety" style="display:none;">
+  <div class="notice-bar">🔒 식품안전정보를 확인하세요.</div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('sf-cert')">
+      <div class="section-title"><div class="icon"></div> 인증정보</div>
+      <span class="chevron" id="chev-sf-cert">∨</span>
+    </div>
+    <div class="section-body open" id="body-sf-cert">
+      <div class="haccp-wrap">
+        <div class="haccp-badge">
+          <div class="h-label">안전관리인증</div>
+          <div class="h-main">HACCP</div>
+          <div class="h-sub">식품의약품안전처</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('sf-mfg')">
+      <div class="section-title"><div class="icon"></div> 품목제조정보</div>
+      <span class="chevron" id="chev-sf-mfg">∨</span>
+    </div>
+    <div class="section-body open" id="body-sf-mfg">
+      <div class="mfg-card">
+        <div class="mfg-row"><span>품목보고번호</span><span>1975072200066</span></div>
+        <div class="mfg-row"><span>상호명</span><span>해태제과식품(주)</span></div>
+        <div class="mfg-row"><span>소재지</span><span>경기도 안산시 단원구 신길로 73</span></div>
+      </div>
+      <div class="mfg-card">
+        <div class="mfg-row"><span>품목보고번호</span><span>1984062100123</span></div>
+        <div class="mfg-row"><span>상호명</span><span>해태제과식품(주)</span></div>
+        <div class="mfg-row"><span>소재지</span><span>충청북도 청주시 흥덕구 강내면 태성탑연로 10</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- ══════════ 조리(활용)법 ══════════ -->
+<div id="page-cooking" style="display:none;">
+  <div class="notice-bar">🍫 식품업체가 제공하는 정보입니다.</div>
+  <div class="section">
+    <div class="section-header" style="cursor:default;">
+      <div style="display:flex;gap:8px;">
+        <button class="sub-tab active">섭취방법</button>
+        <button class="sub-tab">TIP</button>
+      </div>
+    </div>
+    <div class="section-header" onclick="toggleSection('c-steps')">
+      <div class="section-title"><div class="icon"></div> 섭취방법</div>
+      <span class="chevron" id="chev-c-steps">∨</span>
+    </div>
+    <div class="section-body open" id="body-c-steps">
+      <div class="step-item">
+        <div class="step-num">01.</div>
+        <div class="step-text">포장을 개봉하여 그대로 드세요. 별도의 조리 없이 바로 즐길 수 있는 스낵입니다.</div>
+        <div class="step-img">📦</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">02.</div>
+        <div class="step-text">직사광선을 피하고 서늘하고 건조한 곳에 보관하세요. 개봉 후에는 밀봉하여 빠르게 드세요.</div>
+        <div class="step-img">🌡️</div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">03.</div>
+        <div class="step-text">초콜릿 성분이 포함되어 있어 고온에서 녹을 수 있습니다. 20℃ 이하 보관을 권장합니다.</div>
+        <div class="step-img">🍫</div>
+      </div>
+    </div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- ══════════ 제품홍보 ══════════ -->
+<div id="page-promo" style="display:none;">
+  <div class="notice-bar">📣 식품업체가 제공하는 정보입니다.</div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('p-promo')">
+      <div class="section-title"><div class="icon"></div> 제품홍보</div>
+      <span class="chevron" id="chev-p-promo">∨</span>
+    </div>
+    <div class="section-body open" id="body-p-promo">
+      <div class="promo-inner">
+        <div class="promo-brand-row">
+          <div class="promo-brand-dot"></div>
+          <span style="font-weight:700;">해태제과</span>
+        </div>
+        <div class="promo-ball">⚾</div>
+        <div class="promo-name">홈런볼</div>
+        <div class="promo-tagline">🍫 바삭한 과자 속 진한 초코크림</div>
+      </div>
+      <div class="promo-desc">
+        홈런볼은 1981년 출시된 해태제과의 대표 스낵입니다. 바삭한 과자 껍질 안에 부드러운 초코크림이 가득 담긴 한입 크기 과자로, 야구공 모양의 귀여운 외관과 달콤한 맛으로 40여 년간 꾸준히 사랑받는 국민 과자입니다.
+      </div>
+    </div>
+  </div>
+  <div style="height:12px;"></div>
+</div>
+
+<!-- ══ Bottom Nav ══ -->
+<div class="bottom-nav">
+  <button class="nav-item"><span class="nav-icon">🔍</span><span>푸드QR검색</span></button>
+  <button class="nav-item"><span class="nav-icon">⊞</span><span>푸드QR포털</span></button>
+  <button class="nav-item"><span class="nav-icon">✅</span><span>식품안전나라</span></button>
+  <button class="nav-item"><span class="nav-icon">🔗</span><span>제조사누리집</span></button>
+  <button class="nav-item chat" onclick="openChatbot()">
+    <span class="nav-icon">
+      <svg class="bubble-svg" viewBox="0 0 24 24"><path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H6l-2 2V4h16v10z"/></svg>
+      <span class="chat-badge" id="chatBadge">1</span>
+    </span>
+    <span>고객문의</span>
+  </button>
+</div>
+
+<!-- ══════════════════════════════════
+     AI CHATBOT MODAL
+══════════════════════════════════ -->
+<div class="chat-overlay" id="chatOverlay" onclick="handleOverlayClick(event)">
+  <div class="chat-modal">
+
+    <!-- modal header -->
+    <div class="chat-modal-header">
+      <div class="modal-avatar">🤖</div>
+      <div>
+        <div class="modal-title">FOODAI 클레임 접수봇</div>
+        <div class="modal-subtitle">해태제과 고객센터 AI 상담</div>
+      </div>
+      <div class="modal-status"><div class="status-dot"></div>운영중</div>
+      <button class="modal-close" id="exportBtn" onclick="exportClaimsToExcel()" title="접수 완료된 클레임 엑셀 다운로드" style="font-size:11px;width:auto;display:flex;align-items:center;gap:3px;">⬇<span style="font-size:10px;">엑셀(<span id="claimCount">0</span>)</span></button>
+      <button class="modal-close" onclick="resetChat()" title="대화 초기화" style="font-size:11px;width:auto;display:flex;align-items:center;gap:3px;">↺<span style="font-size:10px;">초기화</span></button>
+      <button class="modal-close" onclick="closeChatbot()" title="닫기">✕</button>
+      <div class="reset-confirm-pop" id="resetConfirmPop">
+        <div class="rc-title">정말 초기화할까요?</div>
+        <div class="rc-desc">현재 상담 내용과 접수 완료 내역이 모두 사라집니다.</div>
+        <div class="rc-btns">
+          <button class="rc-cancel" onclick="cancelReset()">취소</button>
+          <button class="rc-ok" onclick="confirmReset()">초기화</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- messages -->
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <!-- input -->
+    <div class="chat-input-area">
+      <textarea class="chat-input-box" id="chatInputBox" placeholder="메시지를 입력하세요..." rows="1"
+        onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">&#9658;</button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ─────────── FOOD QR 탭/섹션 ─────────── */
+function showTab(tab) {
+  ['summary','label','safety','cooking','promo'].forEach(t => {
+    document.getElementById('page-'+t).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+  });
+}
+function toggleSection(id) {
+  const body = document.getElementById('body-'+id);
+  if (!body) return;
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  body.style.display = open ? 'none' : 'block';
+}
+document.querySelectorAll('.section-body.open').forEach(b => b.style.display='block');
+
+/* ─────────── Chatbot ─────────── */
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL   = "claude-sonnet-4-6";
+const SYSTEM_PROMPT = `당신은 식품 고객센터 AI 클레임 접수 상담봇입니다.
+어떤 식품이든 고객의 불편 사항을 단계적으로 수집하여 클레임을 완료 접수하는 것이 목표입니다.
+
+[역할 및 원칙]
+- 따뜻하고 공감적인 어조로 응답하세요.
+- 한 번에 너무 많은 질문을 하지 말고, 자연스럽게 대화하듯 단계적으로 정보를 수집하세요.
+- 어떤 식품이든 고객이 말하는 제품에 대한 클레임을 접수해 주세요. 제품을 제한하지 마세요.
+- 고객이 불편 내용을 말하면, 아래 [공식 상담유형 목록] 중 가장 가까운 것 하나를 "상담유형" 필드에 정확히 그대로 넣으세요(목록 표기와 완전히 동일하게). 목록에 뚜렷이 맞는 게 없으면 "기타"를 사용하세요. 공감 표현 후 추가 정보를 요청하세요.
+- [공식 상담유형 목록] (총 42종, 아래 표기와 정확히 동일하게 넣으세요)
+  이물: 고무류 / 머리카락 / 금속/유리 / 나무조각 / 플라스틱 / 실/끈 / 돌/모래 / 기타이물질 / 비닐 / 종이류 / 벌레류 / 개미
+  변질/맛: 변질 / 당화현상 / 맛이상 / 입자형성 / 형태변화(성형불량) / 곰팡이 / 쩐내 / 화학냄새 / 검은이물질
+  포장/표시: 포장불량 / 갯수부족 / 내용물부족 / 이중제품 / 빈케이스 / 색깔,모양상이 / 유통기한 표시오류 / 중량부족 / 반쪽 / 스티커 없음 / 탄화물 / 덜 구워짐
+  기한/유통: 기한경과
+  기타: 응모권 오류 / 완구불량 / 분류곤란 / 치료 要 / 고객 오인 / 분실(버림) / 기타
+- 상담군 필드는 시스템이 상담유형 기준으로 자동 채우므로, 모르면 빈 값("")으로 두세요.
+- 기본 수집 정보: 제품명, 구매처, 유통기한(또는 제조일), 발생 상황
+- 아래는 당사 공식 제품 목록입니다. 고객이 말한 제품이 이 목록과 비슷하면 목록의 정확한 표기로 정규화해서 "제품명" 필드에 넣으세요 (제조공장 자동 매칭에 사용됨). 목록에 없는 제품이면 고객이 말한 그대로 기재하세요.
+  1000 광초코볼 / 1000 아초코볼과자 / 1000 천에너지바 / 1000 청감자스낵 / 1200 대초코파이 / 1200 천치즈스틱과자 / 1200 청달콤한맛과자 / 1500 광초코칩쿠키 / 1500 아초코네모쿠키 / 1500 천고구마스틱과자 / 1500 청초코롤 / 1800 대사과파이 / 1800 천프로틴에너지바 / 1800 청양파스낵 / 2000 아사과잼파이 / 2500 광아몬드쿠키 / 2500 대치즈파이 / 2500 아블루베리잼파이 / 3000 광김치만두 / 3000 대블루베리파이
+- 제조공장 필드는 시스템이 제품명 기준으로 자동 채우므로, 모르면 빈 값("")으로 두세요.
+- 이물/품질 이슈 추가 수집: 고객 성별, 거주 지역(시/군/구), 상해 여부, 제품 보관 여부, 성함, 연락처
+- 고객이 "왜 이런 문제가 생겼나요", "원인이 뭔가요", "재발 방지책은요" 등 원인·예방 활동을 물어보면, "정확한 원인은 조사가 필요하다"는 원론적 답변만 하지 말고, 아래 [상담유형별 예방·관리 활동] 표에서 해당 상담유형(이미 파악됐다면)에 맞는 활동을 1~2개 골라 자연스럽게 안내하세요. 단, 이는 일반적인 예방 활동 안내일 뿐 "이번 건의 확정 원인"은 아니므로, 정확한 원인 규명은 조사 후 안내된다는 점을 함께 언급하세요.
+- [상담유형별 예방·관리 활동]
+  금속/유리: 금속검출기·X-ray 이물검출기·자석봉/체망 운용
+  고무류: 설비 벨트·패킹 정기 교체 및 마모 점검
+  머리카락: 방진복·모자·헤어넷 착용 관리, 위생구역 출입 통제
+  나무조각: 목재 파렛트 반입 제한, 포장재 사전 검수
+  플라스틱: 설비 부품 파손 점검, 커버류 정기 교체
+  실/끈: 포장 라인 실밥 발생부 점검
+  돌/모래: 원료 세척·선별 공정 강화, 이물 선별기 운용
+  비닐: 포장재 개봉 공정 자동화, 잔여 비닐 검사
+  종이류: 라벨·포장 부자재 투입 공정 점검
+  벌레류, 개미: 방충망·포충기 설치, 정기 방역, 원료 입고 검역
+  기타이물질: X-ray 검출기, 육안검사 강화, 이물 관리 체크리스트
+  변질, 곰팡이, 쩐내: 보관 온습도 관리, 유통기한 내 선입선출 재고 순환
+  당화현상, 입자형성: 보관 온도 급변 방지, 저온 유통 관리
+  맛이상, 화학냄새: 원료 입고 검사, 세척·소독제 잔류 관리
+  형태변화(성형불량): 설비 온도·압력 표준화, 공정 파라미터 모니터링
+  검은이물질: 설비 탄화물 발생 구간 정기 클리닝
+  포장불량, 빈케이스, 이중제품: 포장 라인 자동 비전 검사
+  갯수부족, 내용물부족, 중량부족: 중량 선별기(체크웨이어) 운용
+  유통기한 표시오류: 인쇄 자동 검사(바코드·문자 인식 검수기)
+  색깔,모양상이: 원료 배합 표준화, 공정 샘플링 검사
+  반쪽, 탄화물, 덜 구워짐: 소성·성형 공정 온도 관리, 자동 선별 배출
+  기한경과: 매장 재고 순환 점검, 유통기한 임박 상품 회수 프로세스
+  응모권 오류: 인쇄 데이터 검수 프로세스 이중화
+  완구불량: 협력업체 품질 승인 기준 강화
+  분류곤란, 고객 오인: 상담원 교육, 사진 확인 절차 안내
+  치료 要: 즉시 병원 안내 및 치료비 지원 프로세스 가동
+  분실(버림): 해당 없음(고객 보관 부주의 안내)
+  기타: 개별 사안별 품질팀 조사 후 대응
+- 모든 정보가 수집되면 아래 형식의 JSON 블록을 생성하세요.
+
+[응답 형식]
+- 일반 대화: 자연스러운 한국어 텍스트로만 응답
+- 접수 완료 시: 대화 텍스트 뒤에 반드시 아래 JSON 블록 포함:
+
+\`\`\`json
+{
+  "status": "접수완료",
+  "고객명": "",
+  "연락처": "",
+  "성별": "",
+  "주소": "",
+  "제품명": "",
+  "구입처": "",
+  "유통기한": "",
+  "발생상황": "",
+  "상담유형": "",
+  "상담군": "",
+  "제조공장": "",
+  "상담내용": "",
+  "상해여부": "",
+  "제품보관": ""
+}
+\`\`\`
+`;
+
+/* ─────────── 상담군 자동 매칭 (클레임 데이터 6,721건 학습 결과) ───────────
+   분석 결과: 상담유형(42종)별로 상담군이 사실상 1:1로 결정됨(대부분 100%, 최저 88%). */
+const TYPE_GROUP_MAP = {
+  "개미": "유통2", "갯수부족": "생산2", "검은이물질": "생산2", "고객 오인": "기타2",
+  "고무류": "생산1", "곰팡이": "유통2", "금속/유리": "생산1", "기름": "생산2",
+  "기타": "기타2", "기타이물질": "유통2", "기한경과": "유통1", "나무조각": "생산1",
+  "내용물부족": "생산2", "당화현상": "유통2", "덜 구워짐": "기타1", "돌/모래": "생산1",
+  "맛이상": "유통2", "머리카락": "생산1", "반쪽": "생산2", "벌레류": "유통2",
+  "변질": "유통2", "분류곤란": "기타1", "분실(버림)": "기타2", "비닐": "생산1",
+  "빈케이스": "생산2", "색깔,모양상이": "생산2", "스티커 없음": "기타1", "실/끈": "생산1",
+  "완구불량": "기타1", "유통기한 표시오류": "생산2", "응모권 오류": "기타1", "이중제품": "생산2",
+  "입자형성": "유통2", "종이류": "생산1", "중량부족": "생산2", "쩐내": "유통2",
+  "치료 要": "기타1", "탄화물": "기타1", "포장불량": "생산2", "플라스틱": "생산1",
+  "형태변화(성형불량)": "유통2", "화학냄새": "생산2"
+};
+function matchGroup(claimTypeRaw) {
+  if (!claimTypeRaw) return { group: '', matched: false };
+  const clean = String(claimTypeRaw).replace(/\s+/g, '').trim();
+  // 1) 정확히 일치하는 항목 우선
+  for (const [type, group] of Object.entries(TYPE_GROUP_MAP)) {
+    if (type.replace(/\s+/g, '') === clean) return { group, matched: true };
+  }
+  // 2) 부분 일치 (가장 길게 일치하는 항목 채택 — "기타"가 "기타이물질"에 오매칭되는 것 방지)
+  let best = null;
+  for (const [type, group] of Object.entries(TYPE_GROUP_MAP)) {
+    const t = type.replace(/\s+/g, '');
+    if (clean.includes(t) || t.includes(clean)) {
+      if (!best || t.length > best.len) best = { group, len: t.length };
+    }
+  }
+  return best ? { group: best.group, matched: true } : { group: '', matched: false };
+}
+
+/* ─────────── 제조공장 자동 매칭 (클레임 데이터 6,721건 학습 결과) ───────────
+   분석 결과: 제조공장은 상담군과 무관하고 제품명만으로 100% 결정됨.
+   아래 표는 실제 접수 데이터에서 제품명별 제조공장을 집계한 결과입니다. */
+const PRODUCT_FACTORY_MAP = {
+  "1000 광초코볼": "광공장",
+  "1000 아초코볼과자": "아공장",
+  "1000 천에너지바": "천공장",
+  "1000 청감자스낵": "청공장",
+  "1200 대초코파이": "대공장",
+  "1200 천치즈스틱과자": "천공장",
+  "1200 청달콤한맛과자": "청공장",
+  "1500 광초코칩쿠키": "광공장",
+  "1500 아초코네모쿠키": "아공장",
+  "1500 천고구마스틱과자": "천공장",
+  "1500 청초코롤": "청공장",
+  "1800 대사과파이": "대공장",
+  "1800 천프로틴에너지바": "천공장",
+  "1800 청양파스낵": "청공장",
+  "2000 아사과잼파이": "아공장",
+  "2500 광아몬드쿠키": "광공장",
+  "2500 대치즈파이": "대공장",
+  "2500 아블루베리잼파이": "아공장",
+  "3000 광김치만두": "광공장",
+  "3000 대블루베리파이": "대공장"
+};
+// 코드번호 뗀 이름 -> 공장 (빠른 대조용)
+const PRODUCT_FACTORY_MAP_NOCODE = {};
+Object.entries(PRODUCT_FACTORY_MAP).forEach(([name, factory]) => {
+  PRODUCT_FACTORY_MAP_NOCODE[name.replace(/^\d+\s*/, '')] = factory;
+});
+
+/* 제품명 문자열을 받아 학습된 표를 기준으로 제조공장을 매칭 (상담군은 예측력 없어 미사용) */
+function matchFactory(productNameRaw) {
+  if (!productNameRaw) return { factory: '', matched: false };
+  const clean = String(productNameRaw).replace(/\s+/g, ' ').trim();
+  if (PRODUCT_FACTORY_MAP[clean]) return { factory: PRODUCT_FACTORY_MAP[clean], matched: true };
+
+  const noCode = clean.replace(/^\d+\s*/, '');
+  if (PRODUCT_FACTORY_MAP_NOCODE[noCode]) return { factory: PRODUCT_FACTORY_MAP_NOCODE[noCode], matched: true };
+
+  // 부분 일치 (사용자가 제품명을 축약/변형해서 말한 경우 대비)
+  for (const [name, factory] of Object.entries(PRODUCT_FACTORY_MAP_NOCODE)) {
+    if (noCode && (noCode.includes(name) || name.includes(noCode))) {
+      return { factory, matched: true };
+    }
+  }
+  return { factory: '', matched: false };
+}
+let chatHistory = [];
+let chatLoading = false;
+let chatInited  = false;
+
+function timeStr() {
+  const d=new Date(); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function scrollBottom() {
+  const m=document.getElementById('chatMessages');
+  setTimeout(()=>m.scrollTop=m.scrollHeight, 60);
+}
+
+/* 대화 저장/복원 (새로고침해도 접수 내용 유지) */
+async function saveChatState() {
+  try {
+    const msgsHtml = document.getElementById('chatMessages').innerHTML;
+    await window.storage.set('chat-state', JSON.stringify({ chatHistory, msgsHtml }));
+  } catch (e) { /* storage 미사용 환경이면 무시 */ }
+}
+async function loadChatState() {
+  try {
+    const res = await window.storage.get('chat-state');
+    if (!res) return false;
+    const { chatHistory: savedHistory, msgsHtml } = JSON.parse(res.value);
+    if (!msgsHtml) return false;
+    chatHistory = savedHistory || [];
+    document.getElementById('chatMessages').innerHTML = msgsHtml;
+    scrollBottom();
+    return true;
+  } catch (e) { return false; }
+}
+
+function openChatbot() {
+  document.getElementById('chatOverlay').classList.add('open');
+  document.getElementById('chatBadge').style.display='none';
+  if (!chatInited) {
+    chatInited = true;
+    loadChatState().then(restored => { if (!restored) initChat(); });
+  }
+}
+
+/* ─────────── 접수 완료 클레임 → 엑셀 내보내기 ─────────── */
+let completedClaims = [];
+async function loadCompletedClaims() {
+  try {
+    const res = await window.storage.get('completed-claims');
+    if (res) completedClaims = JSON.parse(res.value);
+  } catch (e) { completedClaims = []; }
+  updateClaimBadge();
+}
+async function addCompletedClaim(data) {
+  const idx = completedClaims.length;
+  const today = new Date();
+  const yy = String(today.getFullYear()).slice(2);
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  data._receiptNo = `CR${yy}${mm}${dd}_${String(idx+1).padStart(5,'0')}`;
+  completedClaims.push(data);
+  updateClaimBadge();
+  try { await window.storage.set('completed-claims', JSON.stringify(completedClaims)); } catch(e) { /* storage 미사용 환경이면 무시 */ }
+}
+function updateClaimBadge() {
+  const el = document.getElementById('claimCount');
+  const btn = document.getElementById('exportBtn');
+  if (el) el.textContent = completedClaims.length;
+  if (btn) btn.style.opacity = completedClaims.length ? '1' : '.45';
+}
+function stripBadgeSuffix(v) {
+  return String(v||'').replace(/\s*\(자동매칭 실패·확인필요\)\s*$/,'').trim();
+}
+function exportClaimsToExcel() {
+  if (!completedClaims.length) return; // 접수 완료 건 없으면 동작 안 함 (버튼도 흐리게 표시됨)
+  if (typeof XLSX === 'undefined') {
+    addBotMsg('엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로고침 후 다시 시도해 주세요.');
+    return;
+  }
+  const rows = completedClaims.map((c, i) => ({
+    'NO': i+1,
+    '접수번호': c._receiptNo || '',
+    '고객명': c.고객명 || '',
+    '연락처': c.연락처 || '',
+    '성별': c.성별 || '',
+    '주소': c.주소 || '',
+    '제품명': c.제품명 || '',
+    '구입처': c.구입처 || '',
+    '유통기한': c.유통기한 || '',
+    '상담유형': c.상담유형 || '',
+    '제조공장': stripBadgeSuffix(c.제조공장),
+    '상담군': stripBadgeSuffix(c.상담군),
+    '상담내용': c.상담내용 || '',
+    '상해여부': c.상해여부 || '',
+    '제품보관': c.제품보관 || '',
+    '기여도': ''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [
+    {wch:5},{wch:16},{wch:10},{wch:14},{wch:6},{wch:14},{wch:20},{wch:14},
+    {wch:12},{wch:14},{wch:10},{wch:8},{wch:30},{wch:8},{wch:8},{wch:8}
+  ];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Claims');
+  const today = new Date();
+  const stamp = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `클레임_접수데이터_${stamp}.xlsx`);
+}
+function closeChatbot() {
+  document.getElementById('chatOverlay').classList.remove('open');
+}
+function handleOverlayClick(e) {
+  if (e.target.id === 'chatOverlay') closeChatbot();
+}
+function resetChat() {
+  document.getElementById('resetConfirmPop').classList.add('open');
+}
+function cancelReset() {
+  document.getElementById('resetConfirmPop').classList.remove('open');
+}
+async function confirmReset() {
+  document.getElementById('resetConfirmPop').classList.remove('open');
+  chatHistory = [];
+  document.getElementById('chatMessages').innerHTML = '';
+  chatInited = false;
+  try { await window.storage.delete('chat-state'); } catch(e) { /* 저장된 게 없거나 storage 미지원이면 무시 */ }
+  openChatbot();
+}
+// 완료된 클레임 배지(엑셀 다운로드 카운트)는 페이지 로드시 미리 로드해둠
+window.addEventListener('DOMContentLoaded', () => { loadCompletedClaims(); });
+document.addEventListener('click', (e) => {
+  const pop = document.getElementById('resetConfirmPop');
+  if (pop && pop.classList.contains('open') && !pop.contains(e.target) && e.target.closest('.modal-close') === null) {
+    pop.classList.remove('open');
+  }
+});
+
+/* date divider */
+function addDateDivider() {
+  const msgs=document.getElementById('chatMessages');
+  const d=document.createElement('div');
+  d.className='date-divider';
+  const n=new Date();
+  d.textContent=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일`;
+  msgs.appendChild(d);
+}
+
+/* add bot message (parse JSON receipt) */
+function addBotMsg(text) {
+  const msgs=document.getElementById('chatMessages');
+  const jsonMatch=text.match(/```json\s*([\s\S]*?)```/);
+  const dialog=text.replace(/```json[\s\S]*?```/g,'').trim();
+
+  const row=document.createElement('div');
+  row.className='msg-row';
+  row.innerHTML=`
+    <div class="bot-av">🤖</div>
+    <div class="msg-col">
+      <div class="msg-bubble">${dialog.replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${timeStr()}</div>
+    </div>`;
+  msgs.appendChild(row);
+
+  if (jsonMatch) {
+    try {
+      const data=JSON.parse(jsonMatch[1]);
+      const fm = matchFactory(data.제품명);
+      data.제조공장 = fm.matched ? fm.factory : (data.제조공장 ? data.제조공장+' (자동매칭 실패·확인필요)' : '미등록 제품·확인필요');
+      data._factoryMatched = fm.matched;
+      const gm = matchGroup(data.상담유형);
+      data.상담군 = gm.matched ? gm.group : (data.상담군 ? data.상담군+' (자동매칭 실패·확인필요)' : '미등록 유형·확인필요');
+      data._groupMatched = gm.matched;
+      addCompletedClaim(data);
+      msgs.appendChild(buildReceipt(data));
+    } catch(e){ console.error(e); }
+  }
+  scrollBottom();
+  saveChatState();
+}
+
+/* receipt card */
+function buildReceipt(data) {
+  const fields=[
+    ['고객명','고객명'],['연락처','연락처'],['성별','성별'],['주소','주소'],
+    ['제품명','제품명'],['구입처','구입처'],['유통기한','유통기한'],
+    ['상담유형','상담유형'],['상담군','상담군'],['제조공장','제조공장'],
+    ['상담내용','상담내용'],['상해여부','상해여부'],['제품보관','제품보관'],
+    ['접수상태','status']
+  ];
+  let rows='';
+  fields.forEach(([label,key])=>{
+    const val=data[key]||'-';
+    let display=val;
+    if (key==='status') display=`<span class="badge-done">${val}</span>`;
+    if (key==='제조공장') {
+      const ok = data._factoryMatched;
+      const badge = ok
+        ? `<span style="background:#e6f9ee;color:#16a34a;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px;">✓ 자동매칭</span>`
+        : `<span style="background:#fff3e0;color:#e65100;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px;">⚠ 확인필요</span>`;
+      display = `${val}${badge}`;
+    }
+    if (key==='상담군') {
+      const ok = data._groupMatched;
+      const badge = ok
+        ? `<span style="background:#e6f9ee;color:#16a34a;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px;">✓ 자동매칭</span>`
+        : `<span style="background:#fff3e0;color:#e65100;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:6px;">⚠ 확인필요</span>`;
+      display = `${val}${badge}`;
+    }
+    rows+=`<div class="receipt-row"><span class="receipt-label">${label}</span><span class="receipt-value">${display}</span></div>`;
+  });
+  const wrap=document.createElement('div');
+  wrap.className='msg-row';
+  wrap.innerHTML=`
+    <div style="width:28px;flex-shrink:0;"></div>
+    <div class="msg-col" style="max-width:90%;">
+      <div class="receipt-card">
+        <div class="receipt-header">📋 접수 완료</div>
+        <div class="receipt-body">${rows}</div>
+      </div>
+      <div class="msg-time">${timeStr()}</div>
+    </div>`;
+  return wrap;
+}
+
+/* add user message */
+function addUserMsg(text) {
+  const msgs=document.getElementById('chatMessages');
+  const row=document.createElement('div');
+  row.className='msg-row user';
+  row.innerHTML=`
+    <div class="msg-col">
+      <div class="msg-bubble">${text.replace(/\n/g,'<br>')}</div>
+      <div class="msg-time">${timeStr()}</div>
+    </div>`;
+  msgs.appendChild(row);
+  scrollBottom();
+  saveChatState();
+}
+
+/* quick chips */
+function addQuickChips(opts) {
+  const msgs=document.getElementById('chatMessages');
+  const wrap=document.createElement('div');
+  wrap.className='quick-wrap';
+  opts.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='quick-chip';
+    btn.textContent=opt;
+    btn.onclick=()=>{ wrap.remove(); document.getElementById('chatInputBox').value=opt; sendChatMessage(); };
+    wrap.appendChild(btn);
+  });
+  msgs.appendChild(wrap);
+  scrollBottom();
+}
+
+/* typing */
+let typingEl=null;
+function showTyping() {
+  const msgs=document.getElementById('chatMessages');
+  typingEl=document.createElement('div');
+  typingEl.className='msg-row';
+  typingEl.innerHTML=`<div class="bot-av">🤖</div><div class="typing-bubble"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  msgs.appendChild(typingEl);
+  scrollBottom();
+}
+function updateTyping(statusText) {
+  if (!typingEl) { showTyping(); }
+  let label = typingEl.querySelector('.typing-status');
+  if (!label) {
+    label = document.createElement('div');
+    label.className = 'typing-status';
+    label.style.cssText = 'font-size:11px;color:#999;padding:0 4px;align-self:flex-end;';
+    typingEl.appendChild(label);
+  }
+  label.textContent = statusText;
+  scrollBottom();
+}
+function hideTyping() { if(typingEl){typingEl.remove();typingEl=null;} }
+
+/* API call (429 발생 시 자동 재시도) */
+async function callAPI(userText) {
+  chatHistory.push({role:'user',content:userText});
+  const body = JSON.stringify({model:MODEL,max_tokens:1000,system:SYSTEM_PROMPT,messages:chatHistory});
+  const maxRetries = 4;
+  let lastErr;
+  for (let attempt=0; attempt<=maxRetries; attempt++) {
+    const res = await fetch(API_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const reply = data.content[0].text;
+      chatHistory.push({role:'assistant',content:reply});
+      return reply;
+    }
+    const errText = await res.text();
+    console.error('API ERR', res.status, errText);
+
+    // 계정 사용한도(세션/일일 한도) 초과인지 확인 - 이 경우는 재시도해도 소용없음
+    let quotaInfo = null;
+    if (res.status === 429) {
+      try {
+        const outer = JSON.parse(errText);
+        const inner = JSON.parse(outer.error.message);
+        if (inner.type === 'exceeded_limit') {
+          const resetsAt = inner.resolved && inner.resolved.limit && inner.resolved.limit.resets_at;
+          quotaInfo = { resetsAt };
+        }
+      } catch(e) { /* 파싱 실패 시 일반 429로 처리 */ }
+    }
+
+    if (quotaInfo) {
+      chatHistory.pop();
+      const err = new Error('QUOTA_EXCEEDED');
+      err.resetsAt = quotaInfo.resetsAt;
+      throw err;
+    }
+
+    lastErr = new Error(res.status+': '+errText);
+    if (res.status === 429 && attempt < maxRetries) {
+      const wait = 1000 * Math.pow(2, attempt); // 1s,2s,4s,8s
+      updateTyping(`요청이 많아 잠시 대기 중입니다... (${attempt+1}/${maxRetries})`);
+      await new Promise(r=>setTimeout(r, wait));
+      continue;
+    }
+    chatHistory.pop(); // 실패했으므로 히스토리에서 마지막 user 메시지 제거 (재전송 시 중복 방지)
+    throw lastErr;
+  }
+  throw lastErr;
+}
+
+/* send */
+async function sendChatMessage() {
+  const input=document.getElementById('chatInputBox');
+  const text=input.value.trim();
+  if(!text||chatLoading) return;
+  input.value=''; input.style.height='auto';
+  chatLoading=true;
+  document.getElementById('chatSendBtn').disabled=true;
+  addUserMsg(text);
+  showTyping();
+  try {
+    const reply=await callAPI(text);
+    hideTyping();
+    addBotMsg(reply);
+  } catch(e) {
+    hideTyping();
+    const msg = String(e && e.message || '');
+    if (msg === 'QUOTA_EXCEEDED') {
+      let timeStr = '잠시 후';
+      if (e.resetsAt) {
+        try {
+          const d = new Date(e.resetsAt);
+          timeStr = d.toLocaleString('ko-KR', { hour:'2-digit', minute:'2-digit', hour12:true, timeZone:'Asia/Seoul' }) + ' (한국시간)';
+        } catch(err) { /* 파싱 실패 시 기본 문구 사용 */ }
+      }
+      addBotMsg(`현재 계정의 사용 한도에 도달해서 잠시 응답을 드릴 수 없어요 🙏\n${timeStr} 이후 다시 이용해 주세요.`);
+    } else if (msg.startsWith('429')) {
+      addBotMsg('현재 요청이 많아 응답이 지연되고 있습니다 🙏 잠시 후 메시지를 다시 보내주세요.');
+    } else {
+      addBotMsg('일시적인 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+  }
+  chatLoading=false;
+  document.getElementById('chatSendBtn').disabled=false;
+  document.getElementById('chatInputBox').focus();
+}
+
+function handleChatKey(e) {
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}
+}
+function autoResize(el) {
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,100)+'px';
+}
+
+/* init greeting */
+async function initChat() {
+  addDateDivider();
+  chatLoading=true;
+  document.getElementById('chatSendBtn').disabled=true;
+  showTyping();
+  await new Promise(r=>setTimeout(r,700));
+  hideTyping();
+  const greeting='안녕하세요. 고객 불편 사항 접수를 도와드리겠습니다.\n\n내용을 말씀해 주시면 확인 후 순차적으로 접수 진행하겠습니다.';
+  chatHistory.push({role:'assistant',content:greeting});
+  addBotMsg(greeting);
+  addQuickChips(['이물 발견','품질 불량','변질·이취','포장 불량','기타 문의']);
+  chatLoading=false;
+  document.getElementById('chatSendBtn').disabled=false;
+}
+</script>
+</body>
+</html>
