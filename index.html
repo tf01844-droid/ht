@@ -735,6 +735,8 @@ function matchGroup(claimTypeRaw, aiGroupRaw) {
    분석 결과: 제조공장은 상담군과 무관하고 제품명만으로 100% 결정됨.
    아래 표는 실제 접수 데이터에서 제품명별 제조공장을 집계한 결과입니다. */
 const PRODUCT_FACTORY_MAP = {
+  "홈런볼(초코)": "아공장",
+  "홈런볼": "아공장",
   "1000 광초코볼": "광공장",
   "1000 아초코볼과자": "아공장",
   "1000 천에너지바": "천공장",
@@ -831,11 +833,34 @@ async function loadCompletedClaims() {
   updateClaimBadge();
 }
 /* 구글시트 연동 (Apps Script 웹앱 URL). 배포 전이면 빈 값으로 두면 되고, 이 경우 시트 전송은 건너뜁니다. */
-const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbypdBTniWt_oc_AuYcW5C4hGDhefLsita_4vS8kpi6O5GvukQFomkYaoguT1ib8PAuF/exec';
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbySugaVUPYRE07F9J-tOyMRScfORvelxHcwEpUN8S0y3q5d2dOg6zPqgQKvw81M6UP2/exec';
+
+async function uploadPhotoToDrive(name, dataUrl) {
+  const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+  const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+  const res = await fetch(SHEETS_API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ type: 'photo_upload', name, dataBase64: dataUrl, mimeType })
+  });
+  const result = await res.json();
+  if (result && result.status === 'ok') return result.url;
+  throw new Error((result && result.message) || '사진 업로드 실패');
+}
 
 async function sendToSheets(data) {
   if (!SHEETS_API_URL) return; // 아직 연동 URL 미설정 - 조용히 스킵
   try {
+    // 첨부 사진이 있으면 먼저 드라이브에 업로드해서 URL을 확보
+    let photoUrls = [];
+    if (data.사진 && data.사진.length) {
+      for (const p of data.사진) {
+        try {
+          const url = await uploadPhotoToDrive(p.name || '사진', p.dataUrl);
+          photoUrls.push(url);
+        } catch (e) { console.error('사진 업로드 실패(해당 사진 건너뜀):', e); }
+      }
+    }
     const payload = {
       접수번호: data._receiptNo || '', 고객명: data.고객명 || '', 연락처: data.연락처 || '',
       성별: data.성별 || '', 주소: data.주소 || '', 제품명: data.제품명 || '',
@@ -843,7 +868,7 @@ async function sendToSheets(data) {
       상담유형: data.상담유형 || '',
       제조공장: stripBadgeSuffix(data.제조공장), 상담군: stripBadgeSuffix(data.상담군),
       상담내용: data.상담내용 || '', 상해여부: data.상해여부 || '', 제품보관: data.제품보관 || '',
-      첨부사진수: (data.사진 && data.사진.length) || 0
+      사진URL: JSON.stringify(photoUrls)
     };
     // Apps Script는 OPTIONS(preflight)를 처리 못하므로 text/plain으로 보내 preflight를 회피
     await fetch(SHEETS_API_URL, {
