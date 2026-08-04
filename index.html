@@ -831,7 +831,7 @@ async function loadCompletedClaims() {
   updateClaimBadge();
 }
 /* 구글시트 연동 (Apps Script 웹앱 URL). 배포 전이면 빈 값으로 두면 되고, 이 경우 시트 전송은 건너뜁니다. */
-const SHEETS_API_URL = ''; // 연동 비활성화 (빈 값이면 시트 호출 자체를 안 함 → 에러도 안 뜸)
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbypdBTniWt_oc_AuYcW5C4hGDhefLsita_4vS8kpi6O5GvukQFomkYaoguT1ib8PAuF/exec';
 
 async function sendToSheets(data) {
   if (!SHEETS_API_URL) return; // 아직 연동 URL 미설정 - 조용히 스킵
@@ -1111,35 +1111,54 @@ function hideTyping() { if(typingEl){typingEl.remove();typingEl=null;} }
 /* API call (429 발생 시 자동 재시도) */
 async function callAPI(userText) {
   chatHistory.push({role:'user',content:userText});
-  const body = JSON.stringify({model:MODEL,max_tokens:1000,system:FULL_SYSTEM_PROMPT,messages:chatHistory});
+  const payload = JSON.stringify({type:'chat', model:MODEL, max_tokens:1000, system:FULL_SYSTEM_PROMPT, messages:chatHistory});
   const maxRetries = 4;
   let lastErr;
   for (let attempt=0; attempt<=maxRetries; attempt++) {
-    const res = await fetch(API_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-      body
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const reply = data.content[0].text;
+    let data;
+    try {
+      // Apps Script는 OPTIONS(preflight)를 처리 못하므로 text/plain으로 보내 preflight를 회피
+      const res = await fetch(SHEETS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: payload
+      });
+      data = await res.json();
+    } catch (netErr) {
+      console.error('네트워크 오류', netErr);
+      lastErr = netErr;
+      if (attempt < maxRetries) {
+        const wait = 1000 * Math.pow(2, attempt);
+        updateTyping(`연결이 원활하지 않습니다. 재시도 중... (${attempt+1}/${maxRetries})`);
+        await new Promise(r=>setTimeout(r, wait));
+        continue;
+      }
+      chatHistory.pop();
+      throw lastErr;
+    }
+
+    if (data && data.content) {
+      const reply = data.content.map(b=>b.text||'').join('');
       chatHistory.push({role:'assistant',content:reply});
       return reply;
     }
-    const errText = await res.text();
-    console.error('API ERR', res.status, errText);
+
+    // Apps Script 프록시는 Anthropic 응답을 그대로 전달하며 항상 HTTP 200을 반환하므로,
+    // 성공 여부는 상태코드가 아니라 응답 JSON 안의 error 필드로 판별해야 함
+    const errType = data && data.error && data.error.type;
+    const errMsg = (data && data.error && data.error.message) || '';
+    console.error('API ERR', JSON.stringify(data));
 
     // 계정 사용한도(세션/일일 한도) 초과인지 확인 - 이 경우는 재시도해도 소용없음
     let quotaInfo = null;
-    if (res.status === 429) {
+    if (errType === 'rate_limit_error') {
       try {
-        const outer = JSON.parse(errText);
-        const inner = JSON.parse(outer.error.message);
+        const inner = JSON.parse(errMsg);
         if (inner.type === 'exceeded_limit') {
           const resetsAt = inner.resolved && inner.resolved.limit && inner.resolved.limit.resets_at;
           quotaInfo = { resetsAt };
         }
-      } catch(e) { /* 파싱 실패 시 일반 429로 처리 */ }
+      } catch(e) { /* 파싱 실패 시 일반 rate limit으로 처리 */ }
     }
 
     if (quotaInfo) {
@@ -1149,8 +1168,8 @@ async function callAPI(userText) {
       throw err;
     }
 
-    lastErr = new Error(res.status+': '+errText);
-    if (res.status === 429 && attempt < maxRetries) {
+    lastErr = new Error((errType||'unknown_error')+': '+errMsg);
+    if (errType === 'rate_limit_error' && attempt < maxRetries) {
       const wait = 1000 * Math.pow(2, attempt); // 1s,2s,4s,8s
       updateTyping(`요청이 많아 잠시 대기 중입니다... (${attempt+1}/${maxRetries})`);
       await new Promise(r=>setTimeout(r, wait));
