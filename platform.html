@@ -1221,6 +1221,12 @@ async function openModal(id) {
   ['dtab-basic','dtab-ai','dtab-photo'].forEach((tid,i)=>{const e=document.getElementById(tid);if(e)e.style.display=i===0?'':'none';});
   const claim=claims.find(c=>c.id===id);
   if(claim && typeof fillModalDetail==='function') await fillModalDetail(claim);
+  // 실제 첨부사진이 있으면 버튼 클릭 없이 자동으로 실제 AI 분석 실행
+  try{
+    const photos = await loadClaimPhotos(id);
+    const hasRealPhotos = (photos||[]).some(p=>p.dataUrl && p.type!=='video');
+    if(hasRealPhotos) triggerRealAI();
+  }catch(e){ console.error('자동 AI분석 트리거 실패:', e); }
 }
 function closeModal(){document.getElementById('claimModal').classList.remove('open');currentModalId=null;}
 async function deleteClaim(){
@@ -4575,6 +4581,18 @@ const PRODUCT_LINES_BY_FACTORY={
   '아공장':['아네모비스킷','아잼파이','아초코볼'],
   '대공장':['대파이']
 };
+/* 제품명 문자열에서 "제품라인" 키를 추출 (예: "1700 아네모비스킷" -> "아네모비스킷").
+   유사사례를 찾을 때 코드번호나 세부 옵션이 달라도 같은 라인이면 매칭시키기 위함. */
+const ALL_PRODUCT_LINES=Object.values(PRODUCT_LINES_BY_FACTORY).flat();
+function getProductLineKey(productStr){
+  if(!productStr) return '';
+  const noCode=String(productStr).replace(/^\d+\s*/,'').trim();
+  const exact=ALL_PRODUCT_LINES.find(line=>line===noCode);
+  if(exact) return exact;
+  const partial=ALL_PRODUCT_LINES.find(line=>noCode.includes(line)||line.includes(noCode));
+  if(partial) return partial;
+  return noCode; // 목록에 없는 제품이면 정제된 제품명 자체를 키로 사용
+}
 function onNewFactoryChange(){
   const factory=document.getElementById('newFactory').value;
   const lineSel=document.getElementById('newProductLine');
@@ -5989,13 +6007,14 @@ function generateModalDetail(claim){
   const hh = 9+Math.floor(rng()*8), mm=Math.floor(rng()*60);
   const reportDecision = group==='이물' ? (rng()<0.15?'신고완료':(rng()<0.35?'검토중':'해당없음')) : '해당없음';
 
-  // 실데이터 기반 유사사례 (동일 유형 다른 건)
-  const sameType = claims.filter(c=>c.type===claim.type && c.id!==claim.id);
+  // 실데이터 기반 유사사례 (동일 유형 + 동일 제품라인인 다른 건)
+  const claimLine = getProductLineKey(claim.product);
+  const sameType = claims.filter(c=>c.type===claim.type && c.id!==claim.id && getProductLineKey(c.product)===claimLine);
   let simcaseHtml = '<div class="simcase-b">유사 사례가 충분하지 않습니다.</div>';
   if(sameType.length){
     const sim = sameType[Math.floor(rng()*sameType.length)];
     const pct = 65+Math.floor(rng()*30);
-    simcaseHtml = `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div class="simcase-t">${escapeHtml(sim.id)} · ${escapeHtml(productName(sim.product))} · ${escapeHtml(sim.factory||'-')}</div><span class="simmatch">${pct}% 유사</span></div><div class="simcase-b">동일 상담유형("${escapeHtml(claim.type)}") 사례이며, ${escapeHtml(sim.date||'-')}에 접수되었습니다.</div>`;
+    simcaseHtml = `<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div class="simcase-t">${escapeHtml(sim.id)} · ${escapeHtml(productName(sim.product))} · ${escapeHtml(sim.factory||'-')}</div><span class="simmatch">${pct}% 유사</span></div><div class="simcase-b">동일 상담유형("${escapeHtml(claim.type)}") · 동일 제품라인("${escapeHtml(claimLine)}") 사례이며, ${escapeHtml(sim.date||'-')}에 접수되었습니다.</div>`;
   }
   // 실데이터 기반 통계 (동일 유형 최근 3개월)
   const months=Array.from(new Set(claims.map(c=>monthKey(c.date)))).filter(Boolean).sort();
