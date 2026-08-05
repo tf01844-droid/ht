@@ -1034,7 +1034,15 @@ async function addBotMsg(text) {
       scrollBottom();
       await addCompletedClaim(data);
       pendingNotice.remove();
-      msgs.appendChild(buildReceipt(data));
+      const confirmRow = document.createElement('div');
+      confirmRow.className = 'msg-row';
+      confirmRow.innerHTML = `
+        <div class="bot-av">🤖</div>
+        <div class="msg-col">
+          <div class="msg-bubble">✅ 접수가 완료되었습니다. (접수번호: ${data._receiptNo||'-'})<br>담당 직원이 확인 후 빠른 시일 내에 연락드리겠습니다. 불편을 드려 다시 한번 죄송합니다.</div>
+          <div class="msg-time">${timeStr()}</div>
+        </div>`;
+      msgs.appendChild(confirmRow);
       lastClaimStatus = data.status || '접수완료';
       lastClaimReceiptNo = data._receiptNo || '';
       pendingPhotos = []; // 접수 완료됐으니 다음 상담을 위해 초기화
