@@ -852,7 +852,7 @@ async function uploadPhotoToDrive(name, dataUrl) {
 }
 
 async function sendToSheets(data) {
-  if (!SHEETS_API_URL) return; // 아직 연동 URL 미설정 - 조용히 스킵
+  if (!SHEETS_API_URL) return null; // 아직 연동 URL 미설정 - 조용히 스킵
   try {
     // 첨부 사진이 있으면 먼저 드라이브에 업로드해서 URL을 확보
     let photoUrls = [];
@@ -865,7 +865,7 @@ async function sendToSheets(data) {
       }
     }
     const payload = {
-      접수번호: data._receiptNo || '', 고객명: data.고객명 || '', 연락처: data.연락처 || '',
+      고객명: data.고객명 || '', 연락처: data.연락처 || '',
       성별: data.성별 || '', 주소: data.주소 || '', 제품명: data.제품명 || '',
       구입처: data.구입처 || '', 유통기한: data.유통기한 || '', 생산배치: data.생산배치 || '',
       상담유형: data.상담유형 || '',
@@ -874,12 +874,15 @@ async function sendToSheets(data) {
       사진URL: JSON.stringify(photoUrls)
     };
     // Apps Script는 OPTIONS(preflight)를 처리 못하므로 text/plain으로 보내 preflight를 회피
-    await fetch(SHEETS_API_URL, {
+    const res = await fetch(SHEETS_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     });
-  } catch (e) { console.error('시트 전송 실패(무시하고 계속 진행):', e); }
+    const result = await res.json();
+    if (result && result.status === 'ok' && result.receiptNo) return result.receiptNo; // 서버(시트)가 발급한 진짜 순번
+    return null;
+  } catch (e) { console.error('시트 전송 실패(무시하고 계속 진행):', e); return null; }
 }
 
 async function addCompletedClaim(data) {
@@ -890,12 +893,13 @@ async function addCompletedClaim(data) {
   const hh = String(today.getHours()).padStart(2,'0');
   const mi = String(today.getMinutes()).padStart(2,'0');
   const ss = String(today.getSeconds()).padStart(2,'0');
-  const rand = String(Math.floor(Math.random()*100)).padStart(2,'0'); // 같은 초에 동시접수돼도 겹치지 않도록
-  data._receiptNo = `CR${yy}${mm}${dd}_${hh}${mi}${ss}${rand}`;
+  const rand = String(Math.floor(Math.random()*100)).padStart(2,'0');
+  // 서버(구글시트)에 먼저 물어봐서 진짜 순번(00001, 00002...)을 발급받음. 실패 시에만 임시로 시간 기반 번호 사용
+  const serverReceiptNo = await sendToSheets(data);
+  data._receiptNo = serverReceiptNo || `CR${yy}${mm}${dd}_${hh}${mi}${ss}${rand}(임시)`;
   completedClaims.push(data);
   updateClaimBadge();
   try { await window.storage.set('completed-claims', JSON.stringify(completedClaims)); } catch(e) { /* storage 미사용 환경이면 무시 */ }
-  sendToSheets(data); // 실패해도 접수 자체는 이미 완료된 상태이므로 await하지 않음
 }
 function updateClaimBadge() {
   const el = document.getElementById('claimCount');
@@ -983,7 +987,7 @@ function addDateDivider() {
 }
 
 /* add bot message (parse JSON receipt) */
-function addBotMsg(text) {
+async function addBotMsg(text) {
   const msgs=document.getElementById('chatMessages');
   const jsonMatch=text.match(/```json\s*([\s\S]*?)```/);
   const dialog=text.replace(/```json[\s\S]*?```/g,'').trim();
@@ -1012,7 +1016,13 @@ function addBotMsg(text) {
       data._groupClarified = gm.clarified || false;
       data.생산배치 = CURRENT_BATCH || data.생산배치 || ''; // AI가 아니라 스캔된 QR 정보로 확정
       data.사진 = pendingPhotos.slice(); // 첨부된 사진(최대 5장)을 접수 데이터에 포함
-      addCompletedClaim(data);
+      const pendingNotice = document.createElement('div');
+      pendingNotice.className = 'msg-row';
+      pendingNotice.innerHTML = `<div class="bot-av">🤖</div><div class="msg-col"><div class="msg-bubble">⏳ 접수번호 발급 중...</div></div>`;
+      msgs.appendChild(pendingNotice);
+      scrollBottom();
+      await addCompletedClaim(data);
+      pendingNotice.remove();
       msgs.appendChild(buildReceipt(data));
       lastClaimStatus = data.status || '접수완료';
       lastClaimReceiptNo = data._receiptNo || '';
