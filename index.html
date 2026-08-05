@@ -1203,7 +1203,8 @@ async function callAPI(userText) {
     }
 
     if (data && data.content) {
-      const reply = data.content.map(b=>b.text||'').join('');
+      const rawReply = data.content.map(b=>b.text||'').join('');
+      const reply = sanitizeAiReply(rawReply); // 폭주(반복) 응답은 대화기록에 남기기 전에 걸러냄 - 안 그러면 다음 턴에 같은 문제가 재발함
       chatHistory.push({role:'assistant',content:reply});
       return reply;
     }
@@ -1362,7 +1363,7 @@ async function sendChatMessage() {
   addUserMsg(text);
   showTyping();
   try {
-    const reply=sanitizeAiReply(await callAPI(text));
+    const reply=await callAPI(text);
     hideTyping();
     addBotMsg(reply);
   } catch(e) {
