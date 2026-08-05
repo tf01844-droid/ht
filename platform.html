@@ -6754,6 +6754,12 @@ checkLoginState();
    이 플랫폼이 주기적으로 조회해서 claims 배열에 실제로 병합합니다. */
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwXAVw7UuAfTV2IyvG7xZS7csZAOAUFV8X8dcFIxvl8wmTEPKjAS6_A9SO2KVwksPWm/exec';
 
+/* 브라우저가 이전 리다이렉트/응답을 캐싱해서 재사용하는 문제를 막기 위한 캐시버스팅 헬퍼 */
+function sheetsUrl() {
+  const sep = SHEETS_API_URL.includes('?') ? '&' : '?';
+  return `${SHEETS_API_URL}${sep}_cb=${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 /* ─────────── Claude 프록시 호출 (Anthropic 직접 호출 대체) ───────────
    Apps Script 웹앱을 거쳐서 AI를 호출. 항상 HTTP 200을 반환하므로
    응답 JSON 안의 error 필드로 성공/실패를 판별해야 함. */
@@ -6763,8 +6769,9 @@ async function callClaudeProxy(bodyObj) {
   }
   let res;
   try {
-    res = await fetch(SHEETS_API_URL, {
+    res = await fetch(sheetsUrl(), {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Apps Script preflight 회피
       body: JSON.stringify({ type: 'chat', ...bodyObj })
     });
@@ -6790,8 +6797,9 @@ async function callClaudeProxy(bodyObj) {
 async function syncChatbotClaimsFromSheet() {
   if (!SHEETS_API_URL) return;
   try {
-    const res = await fetch(SHEETS_API_URL, {
+    const res = await fetch(sheetsUrl(), {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ type: 'get_claims' })
     });
@@ -6852,8 +6860,9 @@ async function syncChatbotClaimsFromSheet() {
 async function syncSessionsFromSheet() {
   if (!SHEETS_API_URL) return;
   try {
-    const res = await fetch(SHEETS_API_URL, {
+    const res = await fetch(sheetsUrl(), {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ type: 'get_sessions' })
     });
