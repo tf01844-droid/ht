@@ -839,11 +839,19 @@ async function loadCompletedClaims() {
 /* 구글시트 연동 (Apps Script 웹앱 URL). 배포 전이면 빈 값으로 두면 되고, 이 경우 시트 전송은 건너뜁니다. */
 const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwXAVw7UuAfTV2IyvG7xZS7csZAOAUFV8X8dcFIxvl8wmTEPKjAS6_A9SO2KVwksPWm/exec';
 
+/* 브라우저/중간 경로가 이전 응답(특히 302 리다이렉트 대상)을 캐싱해서 옛날 결과를 계속 재사용하는 문제를 막기 위해,
+   매 호출마다 고유한 캐시버스팅 파라미터를 붙이고 cache:'no-store'를 강제함 */
+function sheetsUrl() {
+  const sep = SHEETS_API_URL.includes('?') ? '&' : '?';
+  return `${SHEETS_API_URL}${sep}_cb=${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
 async function uploadPhotoToDrive(name, dataUrl) {
   const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
   const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-  const res = await fetch(SHEETS_API_URL, {
+  const res = await fetch(sheetsUrl(), {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ type: 'photo_upload', name, dataBase64: dataUrl, mimeType })
   });
@@ -876,8 +884,9 @@ async function sendToSheets(data) {
       사진URL: JSON.stringify(photoUrls)
     };
     // Apps Script는 OPTIONS(preflight)를 처리 못하므로 text/plain으로 보내 preflight를 회피
-    const res = await fetch(SHEETS_API_URL, {
+    const res = await fetch(sheetsUrl(), {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     });
@@ -1164,8 +1173,10 @@ async function callAPI(userText) {
     let data;
     try {
       // Apps Script는 OPTIONS(preflight)를 처리 못하므로 text/plain으로 보내 preflight를 회피
-      const res = await fetch(SHEETS_API_URL, {
+      // + 캐시버스팅 파라미터/no-store로 예전 리다이렉트 캐시 응답 재사용을 막음
+      const res = await fetch(sheetsUrl(), {
         method: 'POST',
+        cache: 'no-store',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: payload
       });
@@ -1303,8 +1314,9 @@ async function doSyncSessionToSheet(status, claimId) {
     const messages = chatHistory
       .filter(m => typeof m.content === 'string')
       .map(m => ({ role: m.role, content: m.content }));
-    await fetch(SHEETS_API_URL, {
+    await fetch(sheetsUrl(), {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         type: 'session_upsert',
