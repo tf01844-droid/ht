@@ -837,7 +837,7 @@ async function loadCompletedClaims() {
   updateClaimBadge();
 }
 /* 구글시트 연동 (Apps Script 웹앱 URL). 배포 전이면 빈 값으로 두면 되고, 이 경우 시트 전송은 건너뜁니다. */
-const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwqro52eSDkk5rOUWTIfMh1P9BGyY-SG6pHIp8sKE07XSUX_nEf2WBYIuXpx9KPfIPN/exec';
+const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbwXAVw7UuAfTV2IyvG7xZS7csZAOAUFV8X8dcFIxvl8wmTEPKjAS6_A9SO2KVwksPWm/exec';
 
 async function uploadPhotoToDrive(name, dataUrl) {
   const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
