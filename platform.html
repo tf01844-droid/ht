@@ -118,7 +118,7 @@
   .flbl{font-size:12px;font-weight:600;color:var(--text-sub);}
   .finput{border:1px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;font-family:inherit;background:#fff;outline:none;transition:border .15s;}
   .finput:focus{border-color:var(--primary);}
-  textarea.finput{resize:vertical;min-height:80px;}
+  textarea.finput{display:block;width:100%;resize:vertical;min-height:80px;box-sizing:border-box;}
 
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;}
   .modal-overlay.open{display:flex;}
@@ -483,7 +483,7 @@
             <div>
               <label class="flbl">📝 음성 → 텍스트 변환 결과 붙여넣기</label>
               <textarea class="finput" id="phoneCallTranscript" style="min-height:120px;" placeholder="클로바노트 등 외부 STT 도구로 변환한 통화 내용을 여기에 붙여넣어 주세요..."></textarea>
-              <button class="btn btn-p btn-sm" style="margin-top:10px;" onclick="submitPhoneCallTranscript()">🤖 AI로 자동 등록</button>
+              <button class="btn btn-p btn-sm" style="display:block;margin-top:10px;" onclick="submitPhoneCallTranscript()">🤖 AI로 자동 등록</button>
               <div id="phoneCallResult" style="margin-top:10px;"></div>
             </div>
           </div>
@@ -696,7 +696,7 @@
               <span style="font-size:12.5px;font-weight:600;color:var(--text-sub);">🧩 상담군</span>
               <select class="finput" id="statsGroupFilter" style="width:110px;"><option value="">전체</option></select>
               <span style="font-size:12.5px;font-weight:600;color:var(--text-sub);">📡 접수경로</span>
-              <select class="finput" id="statsChannelFilter" style="width:130px;"><option value="">전체</option><option value="홈페이지 접수">홈페이지 접수</option><option value="챗봇 접수">챗봇 접수</option><option value="전화접수">전화접수</option><option value="내부 접수">내부 접수</option></select>
+              <select class="finput" id="statsChannelFilter" style="width:150px;"><option value="">전체</option><option value="홈페이지 접수">홈페이지 접수</option><option value="챗봇 접수">챗봇 접수</option><option value="전화접수">전화접수</option><option value="전화접수(자동)">전화접수(자동)</option><option value="플랫폼 접수">플랫폼 접수</option><option value="내부 접수">내부 접수</option></select>
               <button class="btn btn-p btn-sm" onclick="applyStatsFilters()">적용</button>
               <button class="btn btn-o btn-sm" onclick="resetStatsDateRange()">전체 초기화</button>
               <span id="statsRangeSummary" style="font-size:11.5px;color:var(--text-sub);margin-left:6px;"></span>
@@ -4531,18 +4531,22 @@ function resetStatusFilters(){
 }
 /* ---------- 접수경로 표시 (상담유형 옆 신규 컬럼) ---------- */
 const INTAKE_CHANNEL_WEIGHTED = [
-  '홈페이지 접수','홈페이지 접수','홈페이지 접수',
-  '챗봇 접수','챗봇 접수','챗봇 접수',
-  '전화접수','전화접수','전화접수',
-  '내부 접수'
-]; // 3:3:3:1 비율
+  '챗봇 접수','챗봇 접수',
+  '전화접수(자동)','전화접수(자동)',
+  '전화접수','전화접수','전화접수','전화접수','전화접수',
+  '플랫폼 접수','플랫폼 접수','플랫폼 접수','플랫폼 접수',
+  '홈페이지 접수','홈페이지 접수','홈페이지 접수','홈페이지 접수','홈페이지 접수',
+  '내부 접수','내부 접수'
+]; // 챗봇10% · 전화(자동)10% · 전화25% · 플랫폼20% · 홈페이지25% · 내부10% (과거 출처 불명 데이터에만 적용)
+const REAL_INTAKE_CHANNELS = new Set(['챗봇 접수','전화접수(자동)','플랫폼 접수']);
 function simpleHashStr_(str){ let h=0; for(let i=0;i<str.length;i++){ h=(h*31+str.charCodeAt(i))|0; } return Math.abs(h); }
 function getIntakeChannel(c){
   if(c.channel==='챗봇') return '챗봇 접수'; // 실제 FOOD QR 챗봇 접수는 항상 고정
+  if(REAL_INTAKE_CHANNELS.has(c.channel)) return c.channel; // 전화접수(자동)/플랫폼 접수 등 실제로 확정된 경로는 그대로 사용
   const idx = simpleHashStr_(c.id||'') % INTAKE_CHANNEL_WEIGHTED.length;
-  return INTAKE_CHANNEL_WEIGHTED[idx]; // ID 기반 결정론적 배정 - 매번 다시 렌더링해도 같은 값 유지
+  return INTAKE_CHANNEL_WEIGHTED[idx]; // 출처 불명인 과거 데이터만 ID 기반 결정론적 추정 배정
 }
-const INTAKE_CHANNEL_BADGE={ '홈페이지 접수':'bi', '챗봇 접수':'bp', '전화접수':'bw', '내부 접수':'bs' };
+const INTAKE_CHANNEL_BADGE={ '홈페이지 접수':'bi', '챗봇 접수':'bp', '전화접수':'bw', '전화접수(자동)':'bw', '플랫폼 접수':'bs', '내부 접수':'bd' };
 
 function renderClaimStatus(){
   const countEl=document.getElementById('statusDataCount'); if(!countEl) return;
@@ -4655,7 +4659,8 @@ async function submitNewClaim(){
     expiry: document.getElementById('newExpiry').value || null,
     type, factory,
     group: document.getElementById('newGroup').value,
-    content: document.getElementById('newContent').value.trim()
+    content: document.getElementById('newContent').value.trim(),
+    channel: '플랫폼 접수'
   };
   claims.unshift(claim);
   await saveClaims();
@@ -4775,7 +4780,7 @@ async function confirmPhoneCallClaim(){
     factory: document.getElementById('pcvFactory').value,
     group: TYPE_TO_GROUP_DEMO[type] || '기타1',
     content: document.getElementById('pcvContent').value.trim() || (pendingPhoneCallData ? pendingPhoneCallData.sourceText : ''),
-    channel: '전화상담'
+    channel: '전화접수(자동)'
   };
   claims.unshift(claim);
   await saveClaims();
@@ -4905,7 +4910,7 @@ async function applyStatsNlFilter(){
 - 사용 가능한 상담유형(정확히 이 표기 그대로): ${ALL_CLAIM_TYPES.join(', ')}
 - 사용 가능한 공장: 천공장, 대공장, 광공장, 청공장, 아공장
 - 사용 가능한 상담군: ${GROUP_LIST.join(', ')}
-- 사용 가능한 접수경로: 홈페이지 접수, 챗봇 접수, 전화접수, 내부 접수
+- 사용 가능한 접수경로: 홈페이지 접수, 챗봇 접수, 전화접수, 전화접수(자동), 플랫폼 접수, 내부 접수
 
 [사용자 질문]
 "${q}"
