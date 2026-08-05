@@ -588,6 +588,7 @@ const SYSTEM_PROMPT = `당신은 식품 고객센터 AI 클레임 접수 상담�
 
 [역할 및 원칙]
 - 따뜻하고 공감적인 어조로 응답하세요.
+- 답변은 짧고 간결하게 하세요. 일반 대화 응답은 1~3문장 이내로 하고, 불필요하게 부연설명을 늘리지 마세요 (응답 속도에 직접 영향을 줍니다).
 - 한 번에 너무 많은 질문을 하지 말고, 자연스럽게 대화하듯 단계적으로 정보를 수집하세요.
 - 어떤 식품이든 고객이 말하는 제품에 대한 클레임을 접수해 주세요. 제품을 제한하지 마세요.
 - 고객이 "상담원 연결", "사람이랑 얘기하고 싶다", "직접 통화하고 싶다" 등 사람 상담원 연결을 원하면, 접수를 억지로 계속하지 말고 공감하며 "네, 바로 상담원 연결 도와드릴게요. 잠시만 기다려 주세요 🙏" 같이 안내하세요. 이때 지금까지 대화에서 파악한 정보가 있다면(부족해도 괜찮음) 알고 있는 값만 채운 JSON 블록도 함께 생성해서 상담원이 이어받을 수 있게 하고, "접수상태" 값은 "상담원연결요청"으로 넣으세요.
@@ -854,15 +855,16 @@ async function uploadPhotoToDrive(name, dataUrl) {
 async function sendToSheets(data) {
   if (!SHEETS_API_URL) return null; // 아직 연동 URL 미설정 - 조용히 스킵
   try {
-    // 첨부 사진이 있으면 먼저 드라이브에 업로드해서 URL을 확보
+    // 첨부 사진이 있으면 먼저 드라이브에 업로드해서 URL을 확보 (여러 장이면 동시에 처리)
     let photoUrls = [];
     if (data.사진 && data.사진.length) {
-      for (const p of data.사진) {
-        try {
-          const url = await uploadPhotoToDrive(p.name || '사진', p.dataUrl);
-          photoUrls.push(url);
-        } catch (e) { console.error('사진 업로드 실패(해당 사진 건너뜀):', e); }
-      }
+      const results = await Promise.allSettled(
+        data.사진.map(p => uploadPhotoToDrive(p.name || '사진', p.dataUrl))
+      );
+      results.forEach(r => {
+        if (r.status === 'fulfilled') photoUrls.push(r.value);
+        else console.error('사진 업로드 실패(해당 사진 건너뜀):', r.reason);
+      });
     }
     const payload = {
       고객명: data.고객명 || '', 연락처: data.연락처 || '',
@@ -1289,7 +1291,13 @@ async function handleChatPhotoUpload(evt) {
 }
 
 /* send */
-async function syncSessionToSheet(status, claimId) {
+let sessionSyncTimer = null;
+function syncSessionToSheet(status, claimId) {
+  if (!SHEETS_API_URL) return;
+  clearTimeout(sessionSyncTimer);
+  sessionSyncTimer = setTimeout(() => doSyncSessionToSheet(status, claimId), 1200); // 1.2초 내 연속 호출은 마지막 것만 실제 전송
+}
+async function doSyncSessionToSheet(status, claimId) {
   if (!SHEETS_API_URL) return;
   try {
     const messages = chatHistory
