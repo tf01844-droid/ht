@@ -1405,7 +1405,7 @@ async function initChat() {
   showTyping();
   await new Promise(r=>setTimeout(r,700));
   hideTyping();
-  const greeting=`안녕하세요. [${CURRENT_PRODUCT}] 관련 불편 사항 접수를 도와드리겠습니다.\n\n어떤 점이 불편하셨는지 말씀해 주시면 확인 후 순차적으로 접수 진행하겠습니다.\n(혹시 [${CURRENT_PRODUCT}]이 아닌 다른 제품이라면, 제품명을 함께 말씀해 주세요.)`;
+  const greeting=`안녕하세요. [${CURRENT_PRODUCT}] 관련 불편 사항 접수를 도와드리겠습니다.\n\n어떤 점이 불편하셨는지 말씀해 주시면 확인 후 순차적으로 접수 진행하겠습니다.\n(혹시 [${CURRENT_PRODUCT}]이 아닌 다른 제품이라면, 제품명을 함께 말씀해 주세요.)\n\n챗봇 시연 시 아래 사항을 한번에 작성하여 전송 부탁드립니다.(시간지연, 오류 예방)\n이물종류 / 확인 위치 / 소비기한 / 상해여부 / 제품 보관 여부 / 구매처 / 이름 / 전화번호 / 주소(시.군.구)`;
   chatHistory.push({role:'assistant',content:greeting});
   addBotMsg(greeting);
   addQuickChips(['이물 발견','품질 불량','변질·이취','포장 불량','기타 문의']);
