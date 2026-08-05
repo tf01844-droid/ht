@@ -1338,6 +1338,20 @@ async function doSyncSessionToSheet(status, claimId) {
   } catch (e) { console.error('세션 동기화 실패(무시하고 계속 진행):', e); }
 }
 
+/* AI 응답이 비정상적으로 같은 글자/패턴을 반복하며 폭주하는 경우를 감지해서 안전하게 잘라냄 */
+function sanitizeAiReply(text) {
+  if (!text) return text;
+  const repeatMatch = text.match(/(.{1,8})\1{14,}/); // 1~8자 패턴이 15번 이상 연속 반복되면 폭주로 판단
+  if (repeatMatch) {
+    const idx = text.indexOf(repeatMatch[0]);
+    let cut = text.slice(0, idx).trim();
+    if (!cut) cut = '죄송합니다, 응답 생성 중 오류가 발생했어요 🙏 다시 한 번 말씀해 주시겠어요?';
+    return cut;
+  }
+  if (text.length > 3000) return text.slice(0, 800) + '\n\n(응답이 비정상적으로 길어 일부만 표시했어요. 이어서 말씀해 주세요.)';
+  return text;
+}
+
 async function sendChatMessage() {
   const input=document.getElementById('chatInputBox');
   const text=input.value.trim();
@@ -1348,7 +1362,7 @@ async function sendChatMessage() {
   addUserMsg(text);
   showTyping();
   try {
-    const reply=await callAPI(text);
+    const reply=sanitizeAiReply(await callAPI(text));
     hideTyping();
     addBotMsg(reply);
   } catch(e) {
